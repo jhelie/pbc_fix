@@ -34,7 +34,18 @@ boxes and deformation along the z axis are dealt with.
 
 [ HOW IT WORKS ]
 
-The script simply compares 
+The script simply compares the distance travelled by a particle along the z between 
+consecutive frames. If this distance is greater than a certain % of the simulation
+box (controlled via --delta) than the particle is considered to have crossed the box
+boundaries between the two frames processed.
+
+In practice this means that the script operates iteratively, frames can only be 'fixed'
+by comparing them to previously fixed frames, etc... 
+Therefore:
+ -> the first reference frame should not be a 'problematic' frame (see note 2)
+ -> the frequency at which frames are processed (controlled via -t) should not be so
+    big that it allows great variation of the particles coordinates making it difficult
+    to distinguish crossing of pbc from translational movement
 
 
 [ NOTES ]
@@ -88,7 +99,7 @@ Solvent selection
 Coordinates modification parameters
 -----------------------------------------------------
 --buffer	[80]	: z buffer to maintain (Angstrom) , see note 5
---delta 	[50]	: max z delta allowed between 2 frames (in % of box size) 
+--delta 	[50]	: max z delta allowed between 2 frames (% of box size) 
   
 ''')
 
@@ -392,7 +403,7 @@ def update_xtc(ts, f_index):
 	if f_index == nb_frames_to_process - 1:
 		tmp_all_atoms = U.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
 		tmp_all_atoms.set_positions(tmp_coord_current)
-		tmp_all_atoms.write(args.output_folder + '/' + output_filename[:-4] + "_last.gro")
+		tmp_all_atoms.write(args.output_folder + '/' + output_filename[:-4] + "_ref_t" + str(int(ts.time/float(1000))) + "ns.gro")
 	
 	#update coords: translate to keep > 0
 	tmp_z_min = np.amin(tmp_coord_current[:,2])
