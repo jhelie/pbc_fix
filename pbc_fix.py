@@ -270,12 +270,15 @@ def load_MDA_universe():
 	#case: gro file only
 	#-------------------
 	if args.grofilename != "no":
-		print "Loading reference structure..."
-		U_ref=Universe(reffilename)
-		print "Loading structure to fix..."
-		U_new=Universe(grofilename)
-		sele_ref=U_ref.selectAtoms("not resname W and not resname ION")
-		sele_new=U_new.selectAtoms("not resname W and not resname ION")
+		print "\nLoading reference structure..."
+		U_ref = Universe(reffilename)
+		print "\nLoading structure to fix..."
+		U_gro = Universe(grofilename)
+		all_atoms_ref = U_ref.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
+		all_atoms_gro = U_gro.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
+		if all_atoms_ref.numberOfAtoms() != all_atoms_gro.numberOfAtoms():
+			print "Error: the number of atoms in the -f file (" + str(all_atoms_ref) + ") is different than the one in the -g file (" + str(all_atoms_gro) + ")."
+			sys.exit(1)
 	
 	#case: xtc file
 	#--------------
@@ -353,34 +356,42 @@ def get_ref_coord():
 #=========================================================================================
 
 def update_gro():
-	print "to do"
-	#print "Comparing structures..."
-	##reference file z coords
-	#z_ref=sele_ref.coordinates()[:,2]
 
-	##current coordinates
-	#tmp_new=sele_new.coordinates()
+	ts = U_gro.trajectory.ts
+	box_dim = ts.dimensions[2]
 
-	##calculate delta z	
-	#z_new=sele_new.coordinates()[:,2]
-	#delta_z=z_new-z_ref
+	#get coordinates
+	coord_ref = all_atoms_ref.coordinates()[:,2]
+	coord_gro = all_atoms_gro.coordinates()[:,2]
 
-	##modify z for atoms for which new z <<< old z
-	#to_add=delta_z<-0.7*U_ref.dimensions[2]
-	#if numpy.size(to_add[to_add==True])>0:
-		#tmp_new[:,2][to_add]+=U_new.dimensions[2]
+	#calculate displacement
+	delta_z = coord_gro[:,2] - coord_ref[:,2]
+	nb_box_z = (np.abs(delta_z) + (1 - args.z_ratio) * box_dim) // float(box_dim)
 
-	##modify z for atoms for which new z >>> old z
-	#to_sub=delta_z>0.25*U_ref.dimensions[2]
-	#if numpy.size(to_sub[to_sub==True])>0:
-		#tmp_new[:,2][to_sub]-=U_new.dimensions[2]
+	#update coords: deal with pbc
+	to_add = delta_z < 0
+	to_sub = delta_z > 0
+	coord_gro[:,2][to_add] += nb_box_z[to_add] * box_dim
+	coord_gro[:,2][to_sub] -= nb_box_z[to_sub] * box_dim
 
-	##update coordinates
-	#sele_new.set_positions(tmp_new)
-	#print "Writing new gro file..."
-	#sele_new.write(outfilename+".gro")
-	#print "Writing new pdb file..."
-	#sele_new.write(outfilename+"_long.pdb")
+	#update coords: translate to keep > 0
+	tmp_z_min = np.amin(coord_gro[:,2])
+	if tmp_z_min < 0:
+		coord_gro[:,2] += abs(tmp_z_min)
+	
+	#update box size: encompass all coords
+	if box_dim < np.amax(coord_gro[:,2]):
+		box_dim = np.amax(coord_gro[:,2])
+
+	#update box size: maintain buffer
+	d_buffer = (box_dim - np.amax(coord_gro[:,2])) + np.amin(coord_gro[:,2])
+	if d_buffer < args.z_buffer:
+		box_dim += args.z_buffer - d_buffer
+		
+	#write updated gro file
+	all_atoms_gro.set_positions(coord_gro)
+	ts._unitcell[2] = box_dim
+	all_atoms.write(args.output_folder + '/' + output_filename)
 
 	return
 def update_xtc(ts, f_index):
