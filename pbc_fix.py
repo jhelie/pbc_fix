@@ -388,9 +388,6 @@ def update_xtc(ts, f_index):
 	global z_previous
 	box_dim = ts.dimensions[2]
 
-	#debug
-	#box_dim_prev = ts.dimensions[2]
-
 	#get current coordinates
 	tmp_coord_current = all_atoms.coordinates()
 		
@@ -424,11 +421,7 @@ def update_xtc(ts, f_index):
 	d_buffer = (box_dim - np.amax(tmp_coord_current[:,2])) + np.amin(tmp_coord_current[:,2])
 	if d_buffer < args.z_buffer:
 		box_dim += args.z_buffer - d_buffer
-	
-	#debug
-	#if (box_dim - box_dim_prev) > 20:
-	#	print ts.frame, ts.time
-	
+		
 	#write updated frame
 	all_atoms.set_positions(tmp_coord_current)
 	ts._unitcell[2,2] = box_dim
