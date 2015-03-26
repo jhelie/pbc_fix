@@ -335,12 +335,16 @@ def get_ref_coord():
 	if args.ref == 'xtc':
 		f_index_start = 1
 		U.trajectory[frames_to_process[0]]
-		z_previous = all_atoms.coordinates()[:,2]
+		tmp_coord = all_atoms.coordinates()
+		z_previous = np.zeros((np.shape(tmp_coord)[0],1))
+		z_previous[:,0] = tmp_coord[:,2]
 	else:
 		f_index_start = 0
 		U_ref = Universe(args.reffilename)
 		tmp_all_atoms = U_ref.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
-		z_previous = tmp_all_atoms.coordinates()[:,2]
+		tmp_coord = tmp_all_atoms.coordinates()
+		z_previous = np.zeros((np.shape(tmp_coord)[0],1))
+		z_previous[:,0] = tmp_coord[:,2]
 	
 	return
 
@@ -384,12 +388,14 @@ def update_xtc(ts, f_index):
 	global z_previous
 	box_dim = ts.dimensions[2]
 
+	#debug
+	#box_dim_prev = ts.dimensions[2]
+
 	#get current coordinates
 	tmp_coord_current = all_atoms.coordinates()
-	z_current = tmp_coord_current[:,2]
 		
 	#calculate displacement
-	delta_z = z_current - z_previous
+	delta_z = tmp_coord_current[:,2] - z_previous[:,0]
 	nb_box_z = (np.abs(delta_z) + (1 - args.z_ratio) * box_dim) // float(box_dim)
 	
 	#update coords: deal with pbc
@@ -399,11 +405,11 @@ def update_xtc(ts, f_index):
 	tmp_coord_current[:,2][to_sub] -= nb_box_z[to_sub] * box_dim
 	
 	#store coordinates for next frame comparison
-	z_previous = tmp_coord_current[:,2]
+	z_previous[:,0] = tmp_coord_current[:,2]
 	if f_index == nb_frames_to_process - 1:
 		tmp_all_atoms = U.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
 		tmp_all_atoms.set_positions(tmp_coord_current)
-		tmp_all_atoms.write(args.output_folder + '/' + output_filename[:-4] + "_ref_t" + str(int(ts.time/float(1000))) + "ns.gro")
+		tmp_all_atoms.write(args.output_folder + '/' + output_filename[:-4] + "_ref" + str(int(ts.time/float(1000))) + "ns.gro")
 	
 	#update coords: translate to keep > 0
 	tmp_z_min = np.amin(tmp_coord_current[:,2])
@@ -418,6 +424,10 @@ def update_xtc(ts, f_index):
 	d_buffer = (box_dim - np.amax(tmp_coord_current[:,2])) + np.amin(tmp_coord_current[:,2])
 	if d_buffer < args.z_buffer:
 		box_dim += args.z_buffer - d_buffer
+	
+	#debug
+	#if (box_dim - box_dim_prev) > 20:
+	#	print ts.frame, ts.time
 	
 	#write updated frame
 	all_atoms.set_positions(tmp_coord_current)
