@@ -32,6 +32,11 @@ It works on either a gro file or a xtc trajectory but at the moment only rectang
 boxes and deformation along the z axis are dealt with.
 
 
+[ HOW IT WORKS ]
+
+The script simply compares 
+
+
 [ NOTES ]
 
 1. The script works by comparing each frame to the previous one therefore the
@@ -39,8 +44,10 @@ boxes and deformation along the z axis are dealt with.
    coordinate.
 
 2. In case a xtc file is provided the coordinates of the first frame of the xtc (or 
-   of the frame corresponding to -b) are used as intial reference. In this case the
-   reference gro file is only used to define the sytem's topology.
+   of the frame corresponding to -b) are used as intial reference by default. It is
+   possible to use those of the gro file supplied via -f by setting the --ref option
+   to 'gro'. This is unlikely to be desirable unless the gro file used corresponds
+   to one previoulsy written by this script (see note 6).
 
 3. The gro file via the -f flag provided is used for reference only - as an example
    of what the system looks like before pbc along z becomes an issue. In case an
@@ -54,19 +61,24 @@ boxes and deformation along the z axis are dealt with.
    specified via the --buffer option, so that the minimum distance between particles
    at the bottom and the top of the box will always be > buffer, even with pbc.
 
+6. The script also outputs a gro file which can be used as a the starting reference
+   file to process subsequent xtc files (the coordinates in this gro file correspond
+   to a mid-point state in the algorithm implemented and are likely to be different
+   then those dumped from the fixed xtc file).
+
 
 [ USAGE ]
 
 Option	      Default  	Description                    
 -----------------------------------------------------
--f			: reference coordinate file [.gro] (required)
+-f			: topology/reference coordinate file [.gro] (required)
 -g			: coordinate file to fix [.gro]
 -x			: trajectory file to fix [.xtc]
 -o			: name of output folder
 -b			: beginning time (ns) to process the xtc (optional)
 -e			: ending time (ns) to process the xtc (optional)
 -t 		[10]	: process every t-frames
---last			: only output last frame of xtc (useful as a later starting point if space limited) [TO DO]
+--ref		['xtc']	: starting coordinates to use for reference, see note 2
 
 Solvent selection
 -----------------------------------------------------
@@ -76,7 +88,7 @@ Solvent selection
 Coordinates modification parameters
 -----------------------------------------------------
 --buffer	[80]	: z buffer to maintain (Angstrom) , see note 5
---delta 	[50]	: max z delta allowed between 2 frames (in % of box size) before considering a pbc jump
+--delta 	[50]	: max z delta allowed between 2 frames (in % of box size) 
   
 ''')
 
@@ -88,7 +100,7 @@ parser.add_argument('-o', nargs=1, dest='output_folder', default=['pbc_fix'], he
 parser.add_argument('-b', nargs=1, dest='t_start', default=[-1], type=int, help=argparse.SUPPRESS)
 parser.add_argument('-e', nargs=1, dest='t_end', default=[-1], type=int, help=argparse.SUPPRESS)
 parser.add_argument('-t', nargs=1, dest='frames_dt', default=[10], type=int, help=argparse.SUPPRESS)
-parser.add_argument('--last', dest='xtc_last', action='store_true', help=argparse.SUPPRESS)
+parser.add_argument('--ref', dest='ref', choices=['xtc','gro'], default='xtc', help=argparse.SUPPRESS)
 
 #solvent selection
 parser.add_argument('--ions', nargs=1, dest='ions', default=['ION'], help=argparse.SUPPRESS)
@@ -257,15 +269,11 @@ def load_MDA_universe():
 	#case: xtc file
 	#--------------
 	else:
-		global U
+		global U, W
 		global all_atoms
-		global nb_atoms
-		global nb_frames_xtc
-		global frames_to_process
-		global nb_frames_to_process
-		global f_start
-		global f_end	
-		global z_coord_previous
+		global nb_atoms, nb_frames_xtc
+		global frames_to_process, nb_frames_to_process
+		global f_start, f_end	
 		f_start = 0
 
 		print "\nLoading trajectory..."
@@ -304,69 +312,33 @@ def load_MDA_universe():
 		frames_to_process = map(lambda f:f_start + args.frames_dt*f, range(0,(f_end - f_start)//args.frames_dt+tmp_offset))
 		nb_frames_to_process = len(frames_to_process)
 
-		#initialise writer for output trajectory
-		if not args.xtc_last:
-			global W
-			W = MDAnalysis.coordinates.xdrfile.XTC.XTCWriter(args.output_folder + '/' + output_filename, nb_atoms)
-			#W_tmp = MDAnalysis.coordinates.xdrfile.XTC.XTCWriter("tmp_" + output_filename, nb_atoms)
+		#initialise writer for output trajectory	
+		W = MDAnalysis.coordinates.xdrfile.XTC.XTCWriter(args.output_folder + '/' + output_filename, nb_atoms)
+
+	return
+def get_ref_coord():
+
+	global z_previous
+	global f_index_start
+
+	if args.ref == 'xtc':
+		f_index_start = 1
+		U.trajectory[frames_to_process[0]]
+		z_previous = all_atoms.coordinates()[:,2]
+	else:
+		f_index_start = 0
+		U_ref = Universe(args.reffilename)
+		tmp_all_atoms = U_ref.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
+		z_previous = tmp_all_atoms.coordinates()[:,2]
+	
 	return
 
 #=========================================================================================
 # core functions
 #=========================================================================================
 
-def update_xtc(ts):
-
-	global z_previous
-	box_dim = ts.dimensions[2]
-
-	#get current coordinates
-	tmp_coord_current = all_atoms.coordinates()
-	z_current = tmp_coord_current[:,2]
-		
-	#calculate displacement
-	delta_z = z_current - z_previous
-	nb_box_z = (np.abs(delta_z) + (1 - args.z_ratio) * box_dim) // float(box_dim)
-	
-	#update coords: deal with pbc
-	to_add = delta_z < 0
-	to_sub = delta_z > 0
-	tmp_coord_current[:,2][to_add] += nb_box_z[to_add] * box_dim
-	tmp_coord_current[:,2][to_sub] -= nb_box_z[to_sub] * box_dim
-	z_previous = tmp_coord_current[:,2]
-	
-	#update coords: translate to keep > 0
-	tmp_z_min = np.amin(tmp_coord_current[:,2])
-	if tmp_z_min < 0:
-		tmp_coord_current[:,2] += abs(tmp_z_min)
-	
-	#update box size: encompass all coords
-	if box_dim < np.amax(tmp_coord_current[:,2]):
-		box_dim = np.amax(tmp_coord_current[:,2])
-
-	#update box size: maintain buffer
-	d_buffer = (box_dim - np.amax(tmp_coord_current[:,2])) + np.amin(tmp_coord_current[:,2])
-	if d_buffer < args.z_buffer:
-		box_dim += args.z_buffer - d_buffer
-	
-	#write updated frame
-	all_atoms.set_positions(tmp_coord_current)
-	ts._unitcell[2,2] = box_dim
-	W.write(ts)
-
-	return
-
-##########################################################################################
-# ALGORITHM
-##########################################################################################
-
-load_MDA_universe()
-
-#case: gro file
-if args.grofilename != "no":
-	
+def update_gro():
 	print "to do"
-
 	#print "Comparing structures..."
 	##reference file z coords
 	#z_ref=sele_ref.coordinates()[:,2]
@@ -395,16 +367,70 @@ if args.grofilename != "no":
 	#print "Writing new pdb file..."
 	#sele_new.write(outfilename+"_long.pdb")
 
+	return
+def update_xtc(ts, f_index):
+
+	global z_previous
+	box_dim = ts.dimensions[2]
+
+	#get current coordinates
+	tmp_coord_current = all_atoms.coordinates()
+	z_current = tmp_coord_current[:,2]
+		
+	#calculate displacement
+	delta_z = z_current - z_previous
+	nb_box_z = (np.abs(delta_z) + (1 - args.z_ratio) * box_dim) // float(box_dim)
+	
+	#update coords: deal with pbc
+	to_add = delta_z < 0
+	to_sub = delta_z > 0
+	tmp_coord_current[:,2][to_add] += nb_box_z[to_add] * box_dim
+	tmp_coord_current[:,2][to_sub] -= nb_box_z[to_sub] * box_dim
+	
+	#store coordinates for next frame comparison
+	z_previous = tmp_coord_current[:,2]
+	if f_index == nb_frames_to_process - 1:
+		tmp_all_atoms = U.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
+		tmp_all_atoms.set_positions(tmp_coord_current)
+		tmp_all_atoms.write(args.output_folder + '/' + output_filename[:-4] + "_last.gro")
+	
+	#update coords: translate to keep > 0
+	tmp_z_min = np.amin(tmp_coord_current[:,2])
+	if tmp_z_min < 0:
+		tmp_coord_current[:,2] += abs(tmp_z_min)
+	
+	#update box size: encompass all coords
+	if box_dim < np.amax(tmp_coord_current[:,2]):
+		box_dim = np.amax(tmp_coord_current[:,2])
+
+	#update box size: maintain buffer
+	d_buffer = (box_dim - np.amax(tmp_coord_current[:,2])) + np.amin(tmp_coord_current[:,2])
+	if d_buffer < args.z_buffer:
+		box_dim += args.z_buffer - d_buffer
+	
+	#write updated frame
+	all_atoms.set_positions(tmp_coord_current)
+	ts._unitcell[2,2] = box_dim
+	W.write(ts)
+
+	return
+	
+##########################################################################################
+# ALGORITHM
+##########################################################################################
+
+load_MDA_universe()
+
+#case: gro file
+if args.xtcfilename == "no":
+	print "\nComparing structure files..."
+	update_gro()
+
 #case: xtc file
 else:
 	print "\nProcessing trajectory..."
-	#deal with 1st frame
-	global z_previous
-	U.trajectory[frames_to_process[0]]
-	z_previous = all_atoms.coordinates()[:,2]
-	
-	#browse following frames
-	for f_index in range(1,nb_frames_to_process):		
+	get_ref_coord()
+	for f_index in range(f_index_start,nb_frames_to_process):		
 		#display update
 		progress = '\r -processing frame ' + str(f_index+1) + '/' + str(nb_frames_to_process) + ' (every ' + str(args.frames_dt) + ' from ' + str(f_start) + ' to ' + str(f_end) + ' out of ' + str(nb_frames_xtc) + ') '
 		sys.stdout.flush()
@@ -412,7 +438,7 @@ else:
 
 		#update trajectory
 		ts = U.trajectory[frames_to_process[f_index]]
-		update_xtc(ts)
+		update_xtc(ts, f_index)
 
 #exit
 print "\n\nFinished successfully!" "Check results in folder '" + str(args.output_folder) + "'."
