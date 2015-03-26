@@ -66,7 +66,7 @@ Option	      Default  	Description
 -b			: beginning time (ns) to process the xtc (optional)
 -e			: ending time (ns) to process the xtc (optional)
 -t 		[10]	: process every t-frames
---last			: only output the last frame of xtc (useful as a later starting point if space limited) [TO DEBUG]
+--last			: only output last frame of xtc (useful as a later starting point if space limited) [TO DO]
 
 Solvent selection
 -----------------------------------------------------
@@ -76,7 +76,7 @@ Solvent selection
 Coordinates modification parameters
 -----------------------------------------------------
 --buffer	[80]	: z buffer to maintain (Angstrom) , see note 5
---delta 	[50]	: max vertical delta allowed between 2 frames (in % of box z dimension) before considering a pbc jump
+--delta 	[50]	: max z delta allowed between 2 frames (in % of box size) before considering a pbc jump
   
 ''')
 
@@ -130,7 +130,7 @@ global output_filename
 if args.xtcfilename == 'no':
 	output_filename = args.grofilename[:-4] + "_fixed.gro"
 else:
-	output_filename = args.xtcfilename[:-4] + "_fixed_t" + str(args.frames_dt) + "_.xtc"
+	output_filename = args.xtcfilename[:-4] + "_fixed_t" + str(args.frames_dt) + ".xtc"
 
 #=========================================================================================
 # import modules (doing it now otherwise might crash before we can display the help menu!)
@@ -230,6 +230,9 @@ else:
 	output_log.write(tmp_log + "\n")
 	output_log.close()
 
+	#copy input files
+	shutil.copy2(args.reffilename, args.output_folder + "/")	
+
 
 ##########################################################################################
 # FUNCTIONS DEFINITIONS
@@ -302,20 +305,20 @@ def load_MDA_universe():
 		nb_frames_to_process = len(frames_to_process)
 
 		#initialise writer for output trajectory
-		if last_frame_only == "no":
-			global W, W_tmp
-			W = MDAnalysis.coordinates.xdrfile.XTC.XTCWriter(output_filename, nb_atoms)
+		if not args.xtc_last:
+			global W
+			W = MDAnalysis.coordinates.xdrfile.XTC.XTCWriter(args.output_folder + '/' + output_filename, nb_atoms)
 			#W_tmp = MDAnalysis.coordinates.xdrfile.XTC.XTCWriter("tmp_" + output_filename, nb_atoms)
-
-return
+	return
 
 #=========================================================================================
 # core functions
 #=========================================================================================
 
-def update_xtc(box_dim, ts):
+def update_xtc(ts):
 
 	global z_previous
+	box_dim = ts.dimensions[2]
 
 	#get current coordinates
 	tmp_coord_current = all_atoms.coordinates()
@@ -323,7 +326,7 @@ def update_xtc(box_dim, ts):
 		
 	#calculate displacement
 	delta_z = z_current - z_previous
-	nb_box_z = (np.abs(delta_z) + (1 - args.z_ratio * box_dim)) // float(box_dim)
+	nb_box_z = (np.abs(delta_z) + (1 - args.z_ratio) * box_dim) // float(box_dim)
 	
 	#update coords: deal with pbc
 	to_add = delta_z < 0
@@ -347,7 +350,7 @@ def update_xtc(box_dim, ts):
 		box_dim += args.z_buffer - d_buffer
 	
 	#write updated frame
-	all_atoms.set_positions(tmp_coord_curr)
+	all_atoms.set_positions(tmp_coord_current)
 	ts._unitcell[2,2] = box_dim
 	W.write(ts)
 
@@ -357,9 +360,10 @@ def update_xtc(box_dim, ts):
 # ALGORITHM
 ##########################################################################################
 
+load_MDA_universe()
+
 #case: gro file
-#--------------
-if grofilename != "no":
+if args.grofilename != "no":
 	
 	print "to do"
 
@@ -392,9 +396,8 @@ if grofilename != "no":
 	#sele_new.write(outfilename+"_long.pdb")
 
 #case: xtc file
-#--------------
 else:
-	print "Processing trajectory..."
+	print "\nProcessing trajectory..."
 	#deal with 1st frame
 	global z_previous
 	U.trajectory[frames_to_process[0]]
@@ -407,11 +410,10 @@ else:
 		sys.stdout.flush()
 		sys.stdout.write(progress)
 
-		#go to frame
-		ts = U.trajectory[frames_to_process[f_index]]
-		frames_time[f_index] = ts.time/float(1000)
-
 		#update trajectory
-		update_xtc(U.trajectory.ts.dimensions[2], ts)
+		ts = U.trajectory[frames_to_process[f_index]]
+		update_xtc(ts)
 
+#exit
+print "\n\nFinished successfully!" "Check results in folder '" + str(args.output_folder) + "'."
 sys.exit(0)
