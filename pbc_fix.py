@@ -88,7 +88,7 @@ Option	      Default  	Description
 -o			: name of output folder
 -b			: beginning time (ns) to process the xtc (optional)
 -e			: ending time (ns) to process the xtc (optional)
--t 		[10]	: process every t-frames
+-t 		[1]	: process every t-frames
 --ref		['xtc']	: starting coordinates to use for reference, see note 2
 
 Solvent selection
@@ -110,7 +110,7 @@ parser.add_argument('-x', nargs=1, dest='xtcfilename', default=['no'], help=argp
 parser.add_argument('-o', nargs=1, dest='output_folder', default=['pbc_fix'], help=argparse.SUPPRESS)
 parser.add_argument('-b', nargs=1, dest='t_start', default=[-1], type=int, help=argparse.SUPPRESS)
 parser.add_argument('-e', nargs=1, dest='t_end', default=[-1], type=int, help=argparse.SUPPRESS)
-parser.add_argument('-t', nargs=1, dest='frames_dt', default=[10], type=int, help=argparse.SUPPRESS)
+parser.add_argument('-t', nargs=1, dest='frames_dt', default=[1], type=int, help=argparse.SUPPRESS)
 parser.add_argument('--ref', dest='ref', choices=['xtc','gro'], default='xtc', help=argparse.SUPPRESS)
 
 #solvent selection
@@ -337,10 +337,11 @@ def get_ref_coord():
 
 	if args.ref == 'xtc':
 		f_index_start = 1
-		U.trajectory[frames_to_process[0]]
+		ts = U.trajectory[frames_to_process[0]]
 		tmp_coord = all_atoms.coordinates()
 		z_previous = np.zeros((np.shape(tmp_coord)[0],1))
 		z_previous[:,0] = tmp_coord[:,2]
+		W.write(ts)
 	else:
 		f_index_start = 0
 		U_ref = Universe(args.reffilename)
