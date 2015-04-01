@@ -31,7 +31,7 @@
         <h3>
 <a id="welcome-to-pbc_fix" class="anchor" href="#welcome-to-pbc_fix" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome to pbc_fix!</h3>
 
-<p>This little Python utility correct Molecular Dynamics trajectories in which the systems simulated deforms and expands beyond the dimensions of the simulation box.</p>
+<p>This little Python utility correct Molecular Dynamics trajectories in which the systems simulated deforms and expands beyond the dimensions of the simulation box. At present it only works for rectangular simulation boxes.</p>
 
 <p>If you find it useful please cite it:</p>
 
@@ -41,28 +41,22 @@
 <a id="usage" class="anchor" href="#usage" aria-hidden="true"><span class="octicon octicon-link"></span></a>Usage</h3>
 
 <pre><code>$ python pbc_fix.py -f file.gro -x file.xtc
-</code></pre>
-
-<p>At present it only works for rectangular simulation boxes. A list of all commands is available with:</p>
-
-<pre><code>$ python pbc_fix.py --help
+$ python pbc_fix.py --help
 </code></pre>
 
 <h3>
 <a id="example" class="anchor" href="#example" aria-hidden="true"><span class="octicon octicon-link"></span></a>Example</h3>
 
-<h4>
-<a id="before" class="anchor" href="#before" aria-hidden="true"><span class="octicon octicon-link"></span></a>Before:</h4>
+<p>Frame extracted from raw trajectory containing about 50,000 lipids and 500 peptides:</p>
 
 <p><img src="https://github.com/jhelie/pbc_fix/blob/master/pbc_before.png?raw=true" alt="Raw data"></p>
 
-<h4>
-<a id="after" class="anchor" href="#after" aria-hidden="true"><span class="octicon octicon-link"></span></a>After:</h4>
+<p>Same frame extracted from processed trajectory:</p>
 
 <p><img src="https://github.com/jhelie/pbc_fix/blob/master/pbc_after.png?raw=true" alt="After processing"></p>
 
 <h3>
-<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
+<a id="contact" class="anchor" href="#contact" aria-hidden="true"><span class="octicon octicon-link"></span></a>Contact</h3>
 
 <p>Any suggestions please email <a href="mailto:jean.helie@bioch.ox.ac.uk">jean.helie@bioch.ox.ac.uk</a></p>
       </section>
