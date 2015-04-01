@@ -16,7 +16,7 @@
     <div class="wrapper">
       <header>
         <h1>Pbc fix</h1>
-        <p>Python utility to fix crossing of periodic boundaries conditions in systems expanding outside the unit cell.</p>
+        <p>Fix problematic crossing of box boundaries in MD trajectories.</p>
 
         <p class="view"><a href="https://github.com/jhelie/pbc_fix">View the Project on GitHub <small>jhelie/pbc_fix</small></a></p>
 
@@ -32,6 +32,10 @@
 <a id="welcome-to-pbc_fix" class="anchor" href="#welcome-to-pbc_fix" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome to pbc_fix!</h3>
 
 <p>This little Python utility correct Molecular Dynamics trajectories in which the systems simulated deforms and expands beyond the dimensions of the simulation box.</p>
+
+<p>If you find it useful please cite it:</p>
+
+<p><a href="http://dx.doi.org/10.5281/zenodo.16524"><img src="https://zenodo.org/badge/4607/jhelie/pbc_fix.svg" alt="DOI"></a></p>
 
 <pre><code>$ python pbc_fix.py -f file.gro -x file.xtc
 </code></pre>
