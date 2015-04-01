@@ -1,0 +1,68 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Pbc fix by jhelie</title>
+
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <div class="wrapper">
+      <header>
+        <h1>Pbc fix</h1>
+        <p>Python utility to fix crossing of periodic boundaries conditions in systems expanding outside the unit cell.</p>
+
+        <p class="view"><a href="https://github.com/jhelie/pbc_fix">View the Project on GitHub <small>jhelie/pbc_fix</small></a></p>
+
+
+        <ul>
+          <li><a href="https://github.com/jhelie/pbc_fix/zipball/master">Download <strong>ZIP File</strong></a></li>
+          <li><a href="https://github.com/jhelie/pbc_fix/tarball/master">Download <strong>TAR Ball</strong></a></li>
+          <li><a href="https://github.com/jhelie/pbc_fix">View On <strong>GitHub</strong></a></li>
+        </ul>
+      </header>
+      <section>
+        <h3>
+<a id="welcome-to-pbc_fix" class="anchor" href="#welcome-to-pbc_fix" aria-hidden="true"><span class="octicon octicon-link"></span></a>Welcome to pbc_fix!</h3>
+
+<p>This little Python utility correct Molecular Dynamics trajectories in which the systems simulated deforms and expands beyond the dimensions of the simulation box.</p>
+
+<pre><code>$ python pbc_fix.py -f file.gro -x file.xtc
+</code></pre>
+
+<p>At present it only works for rectangular simulation boxes. A list of all commands is available with:</p>
+
+<pre><code>$ python pbc_fix.py --help
+</code></pre>
+
+<h3>
+<a id="example" class="anchor" href="#example" aria-hidden="true"><span class="octicon octicon-link"></span></a>Example</h3>
+
+<p>Before:</p>
+
+<p><img src="https://www.dropbox.com/s/jqsf2ov63hkmzhd/pbc_before.png?dl=0" alt="Raw data"></p>
+
+<p>After:</p>
+
+<p><img src="https://www.dropbox.com/s/hgd8ork6c85wqyh/pbc_after.png?dl=0" alt="After processing"></p>
+
+<h3>
+<a id="support-or-contact" class="anchor" href="#support-or-contact" aria-hidden="true"><span class="octicon octicon-link"></span></a>Support or Contact</h3>
+
+<p>Any suggestions please email <a href="mailto:jean.helie@bioch.ox.ac.uk">jean.helie@bioch.ox.ac.uk</a></p>
+      </section>
+      <footer>
+        <p>This project is maintained by <a href="https://github.com/jhelie">jhelie</a></p>
+        <p><small>Hosted on GitHub Pages &mdash; Theme by <a href="https://github.com/orderedlist">orderedlist</a></small></p>
+      </footer>
+    </div>
+    <script src="javascripts/scale.fix.js"></script>
+    
+  </body>
+</html>
