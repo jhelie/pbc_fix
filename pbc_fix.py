@@ -12,7 +12,7 @@ import os.path
 #=========================================================================================
 # create parser
 #=========================================================================================
-version_nb = "0.0.1"
+version_nb = "0.0.2"
 parser = argparse.ArgumentParser(prog='pbc_fix', usage='', add_help=False, formatter_class=argparse.RawDescriptionHelpFormatter, description=\
 '''
 **********************************************
@@ -151,9 +151,9 @@ args.z_buffer = args.z_buffer[0]
 #-----------------------
 global output_filename
 if args.xtcfilename == 'no':
-	output_filename = args.grofilename[:-4] + "_fixed.gro"
+	output_filename = args.grofilename[:-4].split('/')[-1] + "_fixed.gro"
 else:
-	output_filename = args.xtcfilename[:-4] + "_fixed_t" + str(args.frames_dt) + ".xtc"
+	output_filename = args.xtcfilename[:-4].split('/')[-1] + "_fixed_t" + str(args.frames_dt) + ".xtc"
 
 #=========================================================================================
 # import modules (doing it now otherwise might crash before we can display the help menu!)
