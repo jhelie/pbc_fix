@@ -17,7 +17,7 @@ parser = argparse.ArgumentParser(prog='pbc_fix', usage='', add_help=False, forma
 '''
 **********************************************
 v''' + version_nb + '''
-author: Jean Helie (jean.helie@bioch.ox.ac.uk)
+author: Jean Helie (jean.helie@gmail.com)
 git: https://github.com/jhelie/pbc_fix
 **********************************************
 	
