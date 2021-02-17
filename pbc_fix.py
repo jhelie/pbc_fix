@@ -12,7 +12,7 @@ import os.path
 #=========================================================================================
 # create parser
 #=========================================================================================
-version_nb = "0.0.2"
+version_nb = "0.0.3"
 parser = argparse.ArgumentParser(prog='pbc_fix', usage='', add_help=False, formatter_class=argparse.RawDescriptionHelpFormatter, description=\
 '''
 **********************************************
@@ -162,17 +162,17 @@ else:
 try:
 	import math
 except:
-	print "Error: you need to install the maths module."
+	print("Error: you need to install the maths module.")
 	sys.exit(1)
 try:
 	import numpy as np
 except:
-	print "Error: you need to install the np module."
+	print("Error: you need to install the np module.")
 	sys.exit(1)
 try:
 	import scipy
 except:
-	print "Error: you need to install the scipy module."
+	print("Error: you need to install the scipy module.")
 	sys.exit(1)
 try:
 	import matplotlib as mpl
@@ -185,12 +185,12 @@ try:
 	from matplotlib.font_manager import FontProperties
 	fontP=FontProperties()
 except:
-	print "Error: you need to install the matplotlib module."
+	print("Error: you need to install the matplotlib module.")
 	sys.exit(1)
 try:
 	import pylab as plt
 except:
-	print "Error: you need to install the pylab module."
+	print("Error: you need to install the pylab module.")
 	sys.exit(1)
 
 #MDAnalysis module
@@ -201,11 +201,8 @@ try:
 	import MDAnalysis.analysis
 	import MDAnalysis.analysis.leaflet
 	import MDAnalysis.analysis.distances
-	#set MDAnalysis to use periodic boundary conditions
-	MDAnalysis.core.flags['use_periodic_selections'] = True
-	MDAnalysis.core.flags['use_KDTree_routines'] = False
 except:
-	print "Error: you need to install the MDAnalysis module first. See http://mdanalysis.googlecode.com"
+	print("Error: you need to install the MDAnalysis module first. See http://mdanalysis.googlecode.com")
 	sys.exit(1)
 	
 #=========================================================================================
@@ -213,22 +210,22 @@ except:
 #=========================================================================================
 
 if not os.path.isfile(args.reffilename):
-	print "Error: file " + str(args.reffilename) + " not found."
+	print("Error: file " + str(args.reffilename) + " not found.")
 	sys.exit(1)
 if args.grofilename == 'no' and args.xtcfilename == 'no':
-	print "Error: you need to specify a file to fix, either via -g or -x. See pbc_fix --help."
+	print("Error: you need to specify a file to fix, either via -g or -x. See pbc_fix --help.")
 	sys.exit(1)
 if args.grofilename != 'no' and not os.path.isfile(args.grofilename):
-	print "Error: file " + str(args.grofilename) + " not found."
+	print("Error: file " + str(args.grofilename) + " not found.")
 	sys.exit(1)
 if args.xtcfilename != 'no' and not os.path.isfile(args.xtcfilename):
-	print "Error: file " + str(args.xtcfilename) + " not found."
+	print("Error: file " + str(args.xtcfilename) + " not found.")
 	sys.exit(1)
 if args.z_buffer < 0:
-	print "Error: the argument of --buffer should be positive. See pbc_fix --help."
+	print("Error: the argument of --buffer should be positive. See pbc_fix --help.")
 	sys.exit(1)
 if args.z_ratio < 0 or args.z_ratio > 100:
-	print "Error: the argument of --delta should be a percentage between 0 and 100. See pbc_fix --help."
+	print("Error: the argument of --delta should be a percentage between 0 and 100. See pbc_fix --help.")
 	sys.exit(1)
 
 #=========================================================================================
@@ -236,7 +233,7 @@ if args.z_ratio < 0 or args.z_ratio > 100:
 #=========================================================================================
 
 if os.path.isdir(args.output_folder):
-	print "Error: folder " + str(args.output_folder) + " already exists, choose a different output name via -o."
+	print("Error: folder " + str(args.output_folder) + " already exists, choose a different output name via -o.")
 	sys.exit(1)
 else:
 	#create folders
@@ -270,15 +267,17 @@ def load_MDA_universe():
 	#case: gro file only
 	#-------------------
 	if args.grofilename != "no":
-		print "\nLoading reference structure..."
-		U_ref = Universe(reffilename)
-		print "\nLoading structure to fix..."
-		U_gro = Universe(grofilename)
-		all_atoms_ref = U_ref.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
-		all_atoms_gro = U_gro.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
-		if all_atoms_ref.numberOfAtoms() != all_atoms_gro.numberOfAtoms():
-			print "Error: the number of atoms in the -f file (" + str(all_atoms_ref) + ") is different than the one in the -g file (" + str(all_atoms_gro) + ")."
+		print("\nLoading reference structure...")
+		U_ref = Universe(args.reffilename)
+		print("\nLoading structure to fix...")
+		U_gro = Universe(args.grofilename)
+		all_atoms_ref = U_ref.select_atoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
+		all_atoms_gro = U_gro.select_atoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
+		if all_atoms_ref.n_atoms != all_atoms_gro.n_atoms:
+			print("Error: the number of atoms in the -f file (" + str(all_atoms_ref) + ") is different than the one in the -g file (" + str(all_atoms_gro) + ").")
 			sys.exit(1)
+
+		return(U_gro, all_atoms_ref, all_atoms_gro)
 	
 	#case: xtc file
 	#--------------
@@ -290,18 +289,18 @@ def load_MDA_universe():
 		global f_start, f_end	
 		f_start = 0
 
-		print "\nLoading trajectory..."
+		print("\nLoading trajectory...")
 		U = Universe(args.reffilename, args.xtcfilename)
 		U_timestep = U.trajectory.dt
-		all_atoms = U.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
-		nb_atoms = all_atoms.numberOfAtoms()
-		nb_frames_xtc = U.trajectory.numframes		
+		all_atoms = U.select_atoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
+		nb_atoms = all_atoms.n_atoms
+		nb_frames_xtc = U.trajectory.n_frames		
 		#sanity check
 		if U.trajectory[nb_frames_xtc-1].time/float(1000) < args.t_start:
-			print "Error: the trajectory duration (" + str(U.trajectory.time/float(1000)) + "ns) is shorted than the starting stime specified (" + str(args.t_start) + "ns)."
+			print("Error: the trajectory duration (" + str(U.trajectory.time/float(1000)) + "ns) is shorted than the starting stime specified (" + str(args.t_start) + "ns).")
 			sys.exit(1)
 		if nb_frames_xtc < args.frames_dt:
-			print "Warning: the trajectory contains fewer frames (" + str(nb_frames_xtc) + ") than the frame step specified (" + str(args.frames_dt) + ")."
+			print("Warning: the trajectory contains fewer frames (" + str(nb_frames_xtc) + ") than the frame step specified (" + str(args.frames_dt) + ").")
 
 		#rewind trajectory
 		U.trajectory.rewind()
@@ -310,26 +309,25 @@ def load_MDA_universe():
 		if args.t_end != -1:
 			f_end = int((args.t_end*1000 - U.trajectory[0].time) / float(U_timestep))
 			if f_end < 0:
-				print "Error: the starting time specified is before the beginning of the xtc."
+				print("Error: the starting time specified is before the beginning of the xtc.")
 				sys.exit(1)
 		else:
 			f_end = nb_frames_xtc - 1		
 		if args.t_start != -1:
 			f_start = int((args.t_start*1000 - U.trajectory[0].time) / float(U_timestep))
 			if f_start > f_end:
-				print "Error: the starting time specified is after the end of the xtc."
+				print("Error: the starting time specified is after the end of the xtc.")
 				sys.exit(1)
 		if (f_end - f_start)%args.frames_dt == 0:
 			tmp_offset = 0
 		else:
 			tmp_offset = 1
-		frames_to_process = map(lambda f:f_start + args.frames_dt*f, range(0,(f_end - f_start)//args.frames_dt+tmp_offset))
+		frames_to_process = [f_start + args.frames_dt*f for f in range(0,(f_end - f_start)//args.frames_dt+tmp_offset)]
 		nb_frames_to_process = len(frames_to_process)
 
 		#initialise writer for output trajectory	
-		W = MDAnalysis.coordinates.xdrfile.XTC.XTCWriter(args.output_folder + '/' + output_filename, nb_atoms)
+		W = MDAnalysis.coordinates.XTC.XTCWriter(args.output_folder + '/' + output_filename, nb_atoms)
 
-	return
 def get_ref_coord():
 
 	global z_previous
@@ -338,15 +336,15 @@ def get_ref_coord():
 	if args.ref == 'xtc':
 		f_index_start = 1
 		ts = U.trajectory[frames_to_process[0]]
-		tmp_coord = all_atoms.coordinates()
+		tmp_coord = all_atoms.positions
 		z_previous = np.zeros((np.shape(tmp_coord)[0],1))
 		z_previous[:,0] = tmp_coord[:,2]
 		W.write(ts)
 	else:
 		f_index_start = 0
 		U_ref = Universe(args.reffilename)
-		tmp_all_atoms = U_ref.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
-		tmp_coord = tmp_all_atoms.coordinates()
+		tmp_all_atoms = U_ref.select_atoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
+		tmp_coord = tmp_all_atoms.positions
 		z_previous = np.zeros((np.shape(tmp_coord)[0],1))
 		z_previous[:,0] = tmp_coord[:,2]
 	
@@ -356,43 +354,43 @@ def get_ref_coord():
 # core functions
 #=========================================================================================
 
-def update_gro():
+def update_gro(U_gro, all_atoms_ref, all_atoms_gro, z_ratio):
 
 	ts = U_gro.trajectory.ts
 	box_dim = ts.dimensions[2]
 
 	#get coordinates
-	coord_ref = all_atoms_ref.coordinates()[:,2]
-	coord_gro = all_atoms_gro.coordinates()[:,2]
+	coord_ref = all_atoms_ref.positions
+	coord_gro = all_atoms_gro.positions
 
 	#calculate displacement
-	delta_z = coord_gro[:,2] - coord_ref[:,2]
+	delta_z = coord_gro[2] - coord_ref[2]
 	nb_box_z = (np.abs(delta_z) + (1 - args.z_ratio) * box_dim) // float(box_dim)
 
 	#update coords: deal with pbc
 	to_add = delta_z < 0
 	to_sub = delta_z > 0
-	coord_gro[:,2][to_add] += nb_box_z[to_add] * box_dim
-	coord_gro[:,2][to_sub] -= nb_box_z[to_sub] * box_dim
+	coord_gro[2][to_add] += nb_box_z[to_add] * box_dim
+	coord_gro[2][to_sub] -= nb_box_z[to_sub] * box_dim
 
 	#update coords: translate to keep > 0
-	tmp_z_min = np.amin(coord_gro[:,2])
+	tmp_z_min = np.amin(coord_gro[2])
 	if tmp_z_min < 0:
-		coord_gro[:,2] += abs(tmp_z_min)
+		coord_gro[2] += abs(tmp_z_min)
 	
 	#update box size: encompass all coords
-	if box_dim < np.amax(coord_gro[:,2]):
-		box_dim = np.amax(coord_gro[:,2])
+	if box_dim < np.amax(coord_gro[2]):
+		box_dim = np.amax(coord_gro[2])
 
 	#update box size: maintain buffer
-	d_buffer = (box_dim - np.amax(coord_gro[:,2])) + np.amin(coord_gro[:,2])
+	d_buffer = (box_dim - np.amax(coord_gro[2])) + np.amin(coord_gro[2])
 	if d_buffer < args.z_buffer:
 		box_dim += args.z_buffer - d_buffer
 		
 	#write updated gro file
-	all_atoms_gro.set_positions(coord_gro)
+	all_atoms_gro.positions = coord_gro
 	ts._unitcell[2] = box_dim
-	all_atoms.write(args.output_folder + '/' + output_filename)
+	all_atoms_gro.write(args.output_folder + '/' + output_filename)
 
 	return
 def update_xtc(ts, f_index):
@@ -401,7 +399,7 @@ def update_xtc(ts, f_index):
 	box_dim = ts.dimensions[2]
 
 	#get current coordinates
-	tmp_coord_current = all_atoms.coordinates()
+	tmp_coord_current = all_atoms.positions
 		
 	#calculate displacement
 	delta_z = tmp_coord_current[:,2] - z_previous[:,0]
@@ -416,8 +414,8 @@ def update_xtc(ts, f_index):
 	#store coordinates for next frame comparison
 	z_previous[:,0] = tmp_coord_current[:,2]
 	if f_index == nb_frames_to_process - 1:
-		tmp_all_atoms = U.selectAtoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
-		tmp_all_atoms.set_positions(tmp_coord_current)
+		tmp_all_atoms = U.select_atoms("not resname " + str(args.waters) + " and not resname " + str(args.ions))
+		tmp_all_atoms.positions = tmp_coord_current
 		tmp_all_atoms.write(args.output_folder + '/' + output_filename[:-4] + "_ref" + str(int(ts.time/float(1000))) + "ns.gro")
 	
 	#update coords: translate to keep > 0
@@ -435,8 +433,8 @@ def update_xtc(ts, f_index):
 		box_dim += args.z_buffer - d_buffer
 		
 	#write updated frame
-	all_atoms.set_positions(tmp_coord_current)
-	ts._unitcell[2,2] = box_dim
+	all_atoms.positions = tmp_coord_current
+	ts._unitcell[2] = box_dim
 	W.write(ts)
 
 	return
@@ -445,16 +443,16 @@ def update_xtc(ts, f_index):
 # ALGORITHM
 ##########################################################################################
 
-load_MDA_universe()
+passables = load_MDA_universe()
 
 #case: gro file
 if args.xtcfilename == "no":
-	print "\nComparing structure files..."
-	update_gro()
+	print("\nComparing structure files...")
+	update_gro(*passables, args.z_ratio)
 
 #case: xtc file
 else:
-	print "\nProcessing trajectory..."
+	print("\nProcessing trajectory...")
 	get_ref_coord()
 	for f_index in range(f_index_start,nb_frames_to_process):		
 		#display update
@@ -467,5 +465,5 @@ else:
 		update_xtc(ts, f_index)
 
 #exit
-print "\n\nFinished successfully!" "Check results in folder '" + str(args.output_folder) + "'."
+print("\n\nFinished successfully!" "Check results in folder '" + str(args.output_folder) + "'.")
 sys.exit(0)
